@@ -1,0 +1,15 @@
+/** 块标平滑移动 **/
+/* 平滑移动 */
+.protyle-gutters {
+    transition: all 0.3s ease-out; /* 数值越大，速度越慢 */
+}
+/* 悬停放大 */
+.protyle-gutters button svg:hover{
+    transform: scale(1.1);
+    color: var(--b3-theme-error);
+}
+
+作者：Nofood
+链接：https://ld246.com/article/1670253216830
+来源：链滴
+协议：CC BY-SA 4.0 https://creativecommons.org/licenses/by-sa/4.0/

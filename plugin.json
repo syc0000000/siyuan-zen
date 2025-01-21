@@ -1,7 +1,7 @@
 {
-  "name": "plugin-sample-vite-svelte",
-  "author": "frostime",
-  "url": "https://github.com/siyuan-note/plugin-sample-vite-svelte",
+  "name": "ZenType",
+  "author": "Han",
+  "url": "https://github.com/Han-Orz/siyuan-zen",
   "version": "0.3.6",
   "minAppVersion": "3.0.12",
   "backends": [
@@ -21,12 +21,12 @@
     "desktop-window"
   ],
   "displayName": {
-    "en_US": "Plugin sample with vite and svelte",
-    "zh_CN": "插件样例 vite + svelte 版"
+    "en_US": "balabala",
+    "zh_CN": "焦点写作"
   },
   "description": {
-    "en_US": "SiYuan plugin sample with vite and svelte",
-    "zh_CN": "使用 vite 和 svelte 开发的思源插件样例"
+    "en_US": "balabala",
+    "zh_CN": "聚焦当前行，打字机模式与顺滑光标"
   },
   "readme": {
     "en_US": "README.md",
@@ -38,8 +38,8 @@
     ]
   },
   "keywords": [
-    "plugin",
-    "sample",
-    "插件样例"
+    "禅",
+    "zen",
+    "打字机"
   ]
 }
