@@ -1,130 +1,94 @@
-import siyuan from "siyuan";
+import { Plugin } from "siyuan";
 
-export default class TypewriterPlugin extends siyuan.Plugin {
-    constructor(options: any) {
-        super(options);
-    }
+export default class FocusBlockPlugin extends Plugin {
+    private readonly FOCUS_CLASS = "focus-block";
+    private readonly BLUR_CLASS = "blur-block";
 
-    onload(): void {
-        console.log("Typewriter plugin loaded");
-        this.logger.debug("Typewriter plugin loaded");
-        this.activate();
-    }
+    onload() {
+        console.log("FocusBlockPlugin loaded");
 
-    onLayoutReady(): void {
-        console.log("Layout ready, activating plugin");
-        this.activate();
-    }
-
-    onunload(): void {
-        console.log("Typewriter plugin unloaded");
-        this.logger.debug("Typewriter plugin unloaded");
-        this.activate(false);
-    }
-
-    protected activate(enable: boolean = true): void {
-        console.log("Activating plugin:", enable);
-        this.toggleEventListener(enable);
-    }
-
-    protected toggleEventListener(enable: boolean): void {
-        console.log("Toggling global event listener:", enable);
-
-        const listener = [
-            "keyup",
-            this.editorEventListener,
-            {
-                capture: true,
-            },
-        ] as Parameters<HTMLElement["addEventListener"]>;
-
-        if (enable) {
-            document.addEventListener(...listener);
-            console.log("Global event listener added");
-        } else {
-            document.removeEventListener(...listener);
-            console.log("Global event listener removed");
-        }
-    }
-
-    protected readonly editorEventListener = (e: Event) => {
-        console.log("Editor event triggered");
-        const cursorPosition = this.getCursorPosition();
-        if (cursorPosition) {
-            console.log("Cursor position:", cursorPosition.rect);
-        } else {
-            console.log("No cursor position found");
-        }
-    };
-
-    private getCursorPosition(): { node: Node; rect: DOMRect } | null {
-        const selection = window.getSelection();
-        if (!selection || selection.rangeCount === 0) {
-            console.log("No selection found");
-            return null;
-        }
-
-        // 获取光标所在的节点
-        const focusNode = selection.focusNode;
-        if (!focusNode) {
-            console.log("No focus node found");
-            return null;
-        }
-
-        // 获取光标所在节点的位置信息
-        if (focusNode.nodeType === Node.TEXT_NODE) {
-            // 如果是文本节点，获取其父元素的位置信息
-            const parentElement = focusNode.parentElement;
-            if (parentElement) {
-                const rect = parentElement.getBoundingClientRect();
-                console.log("Cursor position (text node):", rect);
-                return { node: focusNode, rect };
+        // 添加样式
+        this.addStyle(`
+            .${this.BLUR_CLASS} {
+                opacity: 0.3;
+                transition: opacity 0.7s ease;
             }
-        } else if (focusNode.nodeType === Node.ELEMENT_NODE) {
-            // 如果是元素节点，直接获取其位置信息
-            const rect = (focusNode as HTMLElement).getBoundingClientRect();
-            console.log("Cursor position (element node):", rect);
-            return { node: focusNode, rect };
-        }
+            .${this.FOCUS_CLASS} {
+                opacity: 1 !important;
+                transition: opacity 0.7s ease;
+            }
+        `);
 
-        console.log("Unable to get cursor position");
+        document.addEventListener("input", this.handleInput.bind(this));
+    }
+
+    private addStyle(css: string) {
+        const style = document.createElement("style");
+        style.textContent = css;
+        document.head.appendChild(style);
+        console.log("Styles injected:", style); // 检查样式是否注入
+    }
+
+    private handleInput(event: Event) {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+
+        const range = selection.getRangeAt(0);
+        const currentBlock = this.findContentBlock(range.startContainer);
+        if (currentBlock) {
+            this.updateFocusBlock(currentBlock);
+        }
+    }
+
+    private findContentBlock(node: Node): HTMLElement | null {
+        let element = node.nodeType === Node.TEXT_NODE ? 
+            node.parentElement : node as HTMLElement;
+        
+        while (element && !element.classList?.contains('protyle-wysiwyg')) {
+            if (element.dataset.nodeId) {
+                return element;
+            }
+            element = element.parentElement;
+        }
         return null;
     }
 
-    protected readonly editorEventListener = (e: Event) => {
-        console.log("Editor event triggered");
-        const cursorPosition = this.getCursorPosition();
-        if (cursorPosition) {
-            console.log("Cursor position:", cursorPosition.rect);
-            this.scrollToCenter(cursorPosition.rect);
-        } else {
-            console.log("No cursor position found");
-        }
-    };
-    
-    private scrollToCenter(rect: DOMRect): void {
-        const editorContainer = document.querySelector(".protyle-content") as HTMLElement;
-        if (!editorContainer) {
-            console.log("Editor container not found");
-            return;
-        }
-    
-        // 计算光标所在行的中心位置
-        const cursorCenter = rect.top + rect.height / 2;
-    
-        // 计算容器的中心位置
-        const containerRect = editorContainer.getBoundingClientRect();
-        const containerCenter = containerRect.top + containerRect.height / 2;
-    
-        // 计算需要滚动的距离
-        const scrollOffset = cursorCenter - containerCenter;
-    
-        console.log("Scroll offset:", scrollOffset);
-    
-        // 滚动到目标位置
-        editorContainer.scrollBy({
-            top: scrollOffset,
-            behavior: "smooth",
+    private updateFocusBlock(newBlock: HTMLElement) {
+        // 清除旧块的样式
+        document.querySelectorAll(`.${this.FOCUS_CLASS}, .${this.BLUR_CLASS}`).forEach(el => {
+            el.classList.remove(this.FOCUS_CLASS, this.BLUR_CLASS);
         });
+
+        // 设置新块样式
+        newBlock.classList.add(this.FOCUS_CLASS);
+        this.setAncestorsStyle(newBlock, this.FOCUS_CLASS);
+        this.setSiblingsStyle(newBlock, this.BLUR_CLASS);
+
+        newBlock.scrollIntoView({
+            behavior: "smooth",
+            block: "center", // 将块滚动到屏幕中间
+            inline: "center",
+        });
+    }
+
+    private setAncestorsStyle(element: HTMLElement, styleClass: string) {
+        let parent = element.parentElement;
+        while (parent && !parent.classList.contains('protyle-wysiwyg')) {
+            parent.classList.add(styleClass);
+            parent = parent.parentElement;
+        }
+    }
+
+    private setSiblingsStyle(element: HTMLElement, styleClass: string) {
+        Array.from(element.parentElement?.children || []).forEach(sibling => {
+            if (sibling !== element) {
+                sibling.classList.add(styleClass);
+            }
+        });
+    }
+
+    onunload() {
+        console.log("FocusBlockPlugin unloaded");
+        document.removeEventListener("input", this.handleInput);
     }
 }
