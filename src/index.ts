@@ -1,35 +1,17 @@
 import { Plugin } from "siyuan";
+import "@/index.scss"; // 直接导入 SCSS 文件
 
 export default class FocusBlockPlugin extends Plugin {
     private readonly FOCUS_CLASS = "focus-block";
-    private readonly BLUR_CLASS = "blur-block";
 
     onload() {
         console.log("FocusBlockPlugin loaded");
 
-        // 添加样式
-        this.addStyle(`
-            .${this.BLUR_CLASS} {
-                opacity: 0.3;
-                transition: opacity 0.7s ease;
-            }
-            .${this.FOCUS_CLASS} {
-                opacity: 1 !important;
-                transition: opacity 0.7s ease;
-            }
-        `);
-
+        // 监听输入事件
         document.addEventListener("input", this.handleInput.bind(this));
     }
 
-    private addStyle(css: string) {
-        const style = document.createElement("style");
-        style.textContent = css;
-        document.head.appendChild(style);
-        console.log("Styles injected:", style); // 检查样式是否注入
-    }
-
-    private handleInput(event: Event) {
+    private handleInput() {
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0) return;
 
@@ -37,15 +19,17 @@ export default class FocusBlockPlugin extends Plugin {
         const currentBlock = this.findContentBlock(range.startContainer);
         if (currentBlock) {
             this.updateFocusBlock(currentBlock);
+        } else {
+            console.warn("Current block not found");
         }
     }
 
     private findContentBlock(node: Node): HTMLElement | null {
         let element = node.nodeType === Node.TEXT_NODE ? 
             node.parentElement : node as HTMLElement;
-        
+
         while (element && !element.classList?.contains('protyle-wysiwyg')) {
-            if (element.dataset.nodeId) {
+            if (element.dataset?.nodeId && (element.classList?.contains('p') || element.dataset.type === "NodeHeading")) {
                 return element;
             }
             element = element.parentElement;
@@ -54,36 +38,19 @@ export default class FocusBlockPlugin extends Plugin {
     }
 
     private updateFocusBlock(newBlock: HTMLElement) {
-        // 清除旧块的样式
-        document.querySelectorAll(`.${this.FOCUS_CLASS}, .${this.BLUR_CLASS}`).forEach(el => {
-            el.classList.remove(this.FOCUS_CLASS, this.BLUR_CLASS);
+        // 清除旧块的聚焦样式
+        document.querySelectorAll(`.${this.FOCUS_CLASS}`).forEach(el => {
+            el.classList.remove(this.FOCUS_CLASS);
         });
 
-        // 设置新块样式
+        // 设置新块的聚焦样式
         newBlock.classList.add(this.FOCUS_CLASS);
-        this.setAncestorsStyle(newBlock, this.FOCUS_CLASS);
-        this.setSiblingsStyle(newBlock, this.BLUR_CLASS);
 
+        // 将当前块滚动到屏幕中间
         newBlock.scrollIntoView({
             behavior: "smooth",
-            block: "center", // 将块滚动到屏幕中间
+            block: "center",
             inline: "center",
-        });
-    }
-
-    private setAncestorsStyle(element: HTMLElement, styleClass: string) {
-        let parent = element.parentElement;
-        while (parent && !parent.classList.contains('protyle-wysiwyg')) {
-            parent.classList.add(styleClass);
-            parent = parent.parentElement;
-        }
-    }
-
-    private setSiblingsStyle(element: HTMLElement, styleClass: string) {
-        Array.from(element.parentElement?.children || []).forEach(sibling => {
-            if (sibling !== element) {
-                sibling.classList.add(styleClass);
-            }
         });
     }
 

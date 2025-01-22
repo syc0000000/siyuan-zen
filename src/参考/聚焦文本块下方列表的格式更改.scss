@@ -1,0 +1,31 @@
+// ======================== 核心规则 ========================
+.protyle-wysiwyg {
+    // 聚焦块样式
+    .focus-block {
+      opacity: 1 !important;
+      transition: opacity 0.7s ease;
+    }
+  
+    // ===== 下游块（焦点块后的列表项内容块） =====
+    // 距离1：列表块中第一个列表项的内容块
+    .focus-block ~ [data-type="NodeList"] > .li:nth-child(1) > .p {
+      opacity: 0.4 !important;
+    }
+  
+    // 距离2：列表块中第二个列表项的内容块
+    .focus-block ~ [data-type="NodeList"] > .li:nth-child(2) > .p {
+      opacity: 0.3 !important;
+    }
+  
+    // 距离3：列表块中第三个列表项的内容块
+    .focus-block ~ [data-type="NodeList"] > .li:nth-child(3) > .p {
+      opacity: 0.2 !important;
+    }
+  
+    // ===== 默认透明度 =====
+    [data-type="NodeParagraph"]:not(.focus-block),
+    [data-type="NodeList"] .p {
+      opacity: 0.1;
+      transition: opacity 0.7s ease;
+    }
+  }
