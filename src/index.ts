@@ -91,10 +91,26 @@ export default class FocusBlockPlugin extends Plugin {
         }
     }
 
+    // private setSiblingsStyle(element: HTMLElement, styleClass: string) {
+    //     Array.from(element.parentElement?.children || []).forEach(sibling => {
+    //         if (sibling !== element) {
+    //             sibling.classList.add(styleClass);
+    //         }
+    //     });
+    // }
     private setSiblingsStyle(element: HTMLElement, styleClass: string) {
-        Array.from(element.parentElement?.children || []).forEach(sibling => {
-            if (sibling !== element) {
-                sibling.classList.add(styleClass);
+        // 1. 获取编辑区根元素
+        const editorRoot = document.querySelector('.protyle-wysiwyg');
+        if (!editorRoot) return;
+    
+        // 2. 遍历所有直接子元素
+        Array.from(editorRoot.children).forEach(child => {
+            // 3. 检查是否包含当前块（含嵌套情况）
+            const isCurrentOrParent = child === element || child.contains(element);
+            
+            // 4. 非当前块则添加模糊样式
+            if (!isCurrentOrParent) {
+                child.classList.add(styleClass);
             }
         });
     }

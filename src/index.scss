@@ -59,7 +59,7 @@ $opacity-levels: (
   .focus-block + .p,
   .focus-block + [data-type="NodeHeading"],
   .focus-block + .protyle-action,
-  .focus-block + [data-type="NodeList"] {
+  & > .focus-block + [data-type="NodeList"] {
       opacity: map.get($opacity-levels, 1) !important;
   }
 
@@ -86,5 +86,10 @@ $opacity-levels: (
   // ========================
   .blur-block {
     opacity: 0.2;
+  }
+  [data-type="NodeList"] .p {
+    .blur-block {
+        opacity: 0.3;
+    }
   }
 }
