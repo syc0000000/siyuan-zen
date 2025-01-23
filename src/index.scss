@@ -1,10 +1,8 @@
-// ========================
-// 聚焦块透明度控制模块
-// 支持3级距离衰减（0.4 → 0.3 → 0.2）
-// 默认非聚焦块透明度0.1
-// ========================
+@use "sass:map";
 
-// 基础配置
+// ========================
+// 透明度配置
+// ========================
 $opacity-levels: (
   1: 0.5,
   2: 0.4,
@@ -12,10 +10,9 @@ $opacity-levels: (
 ) !default;
 
 // ========================
-// 通用样式
+// 基础过渡效果
 // ========================
 .protyle-wysiwyg {
-  // 全局过渡效果
   [data-node-id] {
     transition: opacity 0.7s ease;
   }
@@ -33,23 +30,27 @@ $opacity-levels: (
   // 距离1：直接相邻的上游块
   [data-node-id].p:has(+ .focus-block),
   [data-type="NodeHeading"]:has(+ .focus-block),
-  .protyle-action:has(+ .focus-block) {
-    opacity: map-get($opacity-levels, 1) !important;
+  .protyle-action:has(+ .focus-block),
+  [data-type="NodeList"]:has(+ .focus-block) .p {
+      opacity: map.get($opacity-levels, 1) !important;
   }
 
   // 距离2：间隔一个块的上游块
   [data-node-id].p:has(+ .p + .focus-block),
   [data-type="NodeHeading"]:has(+ [data-type="NodeHeading"] + .focus-block),
-  .protyle-action:has(+ .protyle-action + .focus-block) {
-    opacity: map-get($opacity-levels, 2) !important;
+  .protyle-action:has(+ .protyle-action + .focus-block),
+  [data-type="NodeList"]:has(+ [data-node-id] + .focus-block) .p {
+      opacity: map.get($opacity-levels, 2) !important;
   }
 
   // 距离3：间隔两个块的上游块
   [data-node-id].p:has(+ .p + .p + .focus-block),
   [data-type="NodeHeading"]:has(+ [data-type="NodeHeading"] + [data-type="NodeHeading"] + .focus-block),
-  .protyle-action:has(+ .protyle-action + .protyle-action + .focus-block) {
-    opacity: map-get($opacity-levels, 3) !important;
+  .protyle-action:has(+ .protyle-action + .protyle-action + .focus-block),
+  [data-type="NodeList"]:has(+ [data-node-id] + [data-node-id] + .focus-block) .p {
+      opacity: map.get($opacity-levels, 3) !important;
   }
+
 
   // ========================
   // 下游块（下方元素）
@@ -57,31 +58,39 @@ $opacity-levels: (
   // 距离1：直接相邻的下游块
   .focus-block + [data-node-id].p,
   .focus-block + [data-type="NodeHeading"],
-  .focus-block + .protyle-action
-  .focus-block + [data-type="NodeList"] {
-    opacity: map-get($opacity-levels, 1) !important;
+  .focus-block + .protyle-action,
+  .focus-block + [data-type="NodeList"] .p {
+      opacity: map.get($opacity-levels, 1) !important;
   }
 
   // 距离2：间隔一个块的下游块
   .focus-block + .p + .p,
   .focus-block + [data-type="NodeHeading"] + [data-type="NodeHeading"],
-  .focus-block + .protyle-action + .protyle-action {
-    opacity: map-get($opacity-levels, 2) !important;
+  .focus-block + .protyle-action + .protyle-action,
+  .focus-block + [data-type="NodeList"] + [data-type="NodeList"] .p {
+      opacity: map.get($opacity-levels, 2) !important;
   }
 
   // 距离3：间隔两个块的下游块
   .focus-block + .p + .p + .p,
   .focus-block + [data-type="NodeHeading"] + [data-type="NodeHeading"] + [data-type="NodeHeading"],
-  .focus-block + .protyle-action + .protyle-action + .protyle-action {
-    opacity: map-get($opacity-levels, 3) !important;
+  .focus-block + .protyle-action + .protyle-action + .protyle-action,
+  .focus-block + [data-type="NodeList"] + [data-type="NodeList"] + [data-type="NodeList"] .p {
+      opacity: map.get($opacity-levels, 3) !important;
   }
+
+  // ========================
 
   // ========================
   // 默认透明度规则
   // ========================
-  [data-node-id].p:not(.focus-block),
-  [data-type="NodeHeading"]:not(.focus-block),
-  .protyle-action:not(.focus-block) {
+  // [data-node-id].p:not(.focus-block),
+  // [data-type="NodeHeading"]:not(.focus-block),
+  // .protyle-action:not(.focus-block),
+  // [data-type="NodeList"]:not(.focus-block) .p {
+  //   opacity: 0.2;
+  // }
+  .blur-block {
     opacity: 0.2;
   }
 }
