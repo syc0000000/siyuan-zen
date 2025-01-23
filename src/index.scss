@@ -31,23 +31,23 @@ $opacity-levels: (
   [data-node-id].p:has(+ .focus-block),
   [data-type="NodeHeading"]:has(+ .focus-block),
   .protyle-action:has(+ .focus-block),
-  [data-type="NodeList"]:has(+ .focus-block) .p {
+  [data-type="NodeList"]:has(+ .focus-block) {
       opacity: map.get($opacity-levels, 1) !important;
   }
 
   // 距离2：间隔一个块的上游块
-  [data-node-id].p:has(+ .p + .focus-block),
-  [data-type="NodeHeading"]:has(+ [data-type="NodeHeading"] + .focus-block),
-  .protyle-action:has(+ .protyle-action + .focus-block),
-  [data-type="NodeList"]:has(+ [data-node-id] + .focus-block) .p {
+  [data-node-id].p:has(+ .blur-block + .focus-block),
+  [data-type="NodeHeading"]:has(+ .blur-block + .focus-block),
+  .protyle-action:has(+ .blur-block + .focus-block),
+  [data-type="NodeList"]:has(+ .blur-block + .focus-block) {
       opacity: map.get($opacity-levels, 2) !important;
   }
 
   // 距离3：间隔两个块的上游块
-  [data-node-id].p:has(+ .p + .p + .focus-block),
-  [data-type="NodeHeading"]:has(+ [data-type="NodeHeading"] + [data-type="NodeHeading"] + .focus-block),
-  .protyle-action:has(+ .protyle-action + .protyle-action + .focus-block),
-  [data-type="NodeList"]:has(+ [data-node-id] + [data-node-id] + .focus-block) .p {
+  [data-node-id].p:has(+ .blur-block + .blur-block + .focus-block),
+  [data-type="NodeHeading"]:has(+ .blur-block + .blur-block + .focus-block),
+  .protyle-action:has(+ .blur-block + .blur-block + .focus-block),
+  [data-type="NodeList"]:has(+ .blur-block + .blur-block + .focus-block) {
       opacity: map.get($opacity-levels, 3) !important;
   }
 
@@ -56,26 +56,26 @@ $opacity-levels: (
   // 下游块（下方元素）
   // ========================
   // 距离1：直接相邻的下游块
-  .focus-block + [data-node-id].p,
+  .focus-block + .p,
   .focus-block + [data-type="NodeHeading"],
   .focus-block + .protyle-action,
-  .focus-block + [data-type="NodeList"] .p {
+  .focus-block + [data-type="NodeList"] {
       opacity: map.get($opacity-levels, 1) !important;
   }
 
   // 距离2：间隔一个块的下游块
-  .focus-block + .p + .p,
-  .focus-block + [data-type="NodeHeading"] + [data-type="NodeHeading"],
-  .focus-block + .protyle-action + .protyle-action,
-  .focus-block + [data-type="NodeList"] + [data-type="NodeList"] .p {
+  .focus-block + .blur-block + .p,
+  .focus-block + .blur-block + [data-type="NodeHeading"],
+  .focus-block + .blur-block + .protyle-action,
+  .focus-block + .blur-block + [data-type="NodeList"] {
       opacity: map.get($opacity-levels, 2) !important;
   }
 
   // 距离3：间隔两个块的下游块
-  .focus-block + .p + .p + .p,
-  .focus-block + [data-type="NodeHeading"] + [data-type="NodeHeading"] + [data-type="NodeHeading"],
-  .focus-block + .protyle-action + .protyle-action + .protyle-action,
-  .focus-block + [data-type="NodeList"] + [data-type="NodeList"] + [data-type="NodeList"] .p {
+  .focus-block + .blur-block + .blur-block + .p,
+  .focus-block + .blur-block + .blur-block + [data-type="NodeHeading"],
+  .focus-block + .blur-block + .blur-block + .protyle-action,
+  .focus-block + .blur-block + .blur-block + [data-type="NodeList"] {
       opacity: map.get($opacity-levels, 3) !important;
   }
 
@@ -84,12 +84,6 @@ $opacity-levels: (
   // ========================
   // 默认透明度规则
   // ========================
-  // [data-node-id].p:not(.focus-block),
-  // [data-type="NodeHeading"]:not(.focus-block),
-  // .protyle-action:not(.focus-block),
-  // [data-type="NodeList"]:not(.focus-block) .p {
-  //   opacity: 0.2;
-  // }
   .blur-block {
     opacity: 0.2;
   }
