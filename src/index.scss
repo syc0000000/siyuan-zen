@@ -1,3 +1,4 @@
+/* index.scss */
 @use "sass:map";
 
 // ========================
@@ -17,79 +18,135 @@ $opacity-levels: (
     transition: opacity 0.7s ease;
   }
 
+  // 调整全屏下的覆盖层级
+  .fullscreen {
+    z-index: 3;
+      #highlight-line { z-index: 6;}
+      .focus-block { z-index: 9;}
+  }
+
   // ========================
   // 焦点块样式
   // ========================
   .focus-block {
     opacity: 1 !important;
+    z-index: 3; // 确保焦点块在最上层
   }
 
   // ========================
-  // 上游块（上方元素）
+  // 上游块透明度规则（上方元素）
   // ========================
-  // 距离1：直接相邻的上游块
+  // 直接相邻的上游块
   [data-node-id].p:has(+ .focus-block),
   [data-type="NodeHeading"]:has(+ .focus-block),
   .protyle-action:has(+ .focus-block),
   [data-type="NodeList"]:has(+ .focus-block) {
-      opacity: map.get($opacity-levels, 1) !important;
+    opacity: map.get($opacity-levels, 1) !important;
   }
 
-  // 距离2：间隔一个块的上游块
+  // 间隔一个块的上游块
   [data-node-id].p:has(+ .blur-block + .focus-block),
   [data-type="NodeHeading"]:has(+ .blur-block + .focus-block),
   .protyle-action:has(+ .blur-block + .focus-block),
   [data-type="NodeList"]:has(+ .blur-block + .focus-block) {
-      opacity: map.get($opacity-levels, 2) !important;
+    opacity: map.get($opacity-levels, 2) !important;
   }
 
-  // 距离3：间隔两个块的上游块
+  // 间隔两个块的上游块
   [data-node-id].p:has(+ .blur-block + .blur-block + .focus-block),
   [data-type="NodeHeading"]:has(+ .blur-block + .blur-block + .focus-block),
   .protyle-action:has(+ .blur-block + .blur-block + .focus-block),
   [data-type="NodeList"]:has(+ .blur-block + .blur-block + .focus-block) {
-      opacity: map.get($opacity-levels, 3) !important;
+    opacity: map.get($opacity-levels, 3) !important;
   }
 
-
   // ========================
-  // 下游块（下方元素）
+  // 下游块透明度规则（下方元素）
   // ========================
-  // 距离1：直接相邻的下游块
+  // 直接相邻的下游块
   .focus-block + .p,
   .focus-block + [data-type="NodeHeading"],
   .focus-block + .protyle-action,
   & > .focus-block + [data-type="NodeList"] {
-      opacity: map.get($opacity-levels, 1) !important;
+    opacity: map.get($opacity-levels, 1) !important;
   }
 
-  // 距离2：间隔一个块的下游块
+  // 间隔一个块的下游块
   .focus-block + .blur-block + .p,
   .focus-block + .blur-block + [data-type="NodeHeading"],
   .focus-block + .blur-block + .protyle-action,
   .focus-block + .blur-block + [data-type="NodeList"] {
-      opacity: map.get($opacity-levels, 2) !important;
+    opacity: map.get($opacity-levels, 2) !important;
   }
 
-  // 距离3：间隔两个块的下游块
+  // 间隔两个块的下游块
   .focus-block + .blur-block + .blur-block + .p,
   .focus-block + .blur-block + .blur-block + [data-type="NodeHeading"],
   .focus-block + .blur-block + .blur-block + .protyle-action,
   .focus-block + .blur-block + .blur-block + [data-type="NodeList"] {
-      opacity: map.get($opacity-levels, 3) !important;
+    opacity: map.get($opacity-levels, 3) !important;
   }
 
   // ========================
-
-  // ========================
-  // 默认透明度规则
+  // 默认模糊样式
   // ========================
   .blur-block {
     opacity: 0.2;
-  }
-  [data-type="NodeList"] .p {
-    .blur-block {
-        opacity: 0.3;
+    
+    // 列表块内段落特殊处理
+    [data-type="NodeList"] .p & {
+      opacity: 0.3;
     }
   }
+}
+
+// ========================
+// 高亮条样式
+// ========================
+#highlight-line {
+  position: fixed;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 1;
+  transform: translateY(-0.1em);
+  
+  // 日间模式
+  background: #f2ecde99;
+  
+  // 夜间模式
+  [data-theme-mode="dark"] & {
+    background: #36343373;
+  }
+}
+
+// 隐藏所有可编辑区域的默认光标
+// .protyle-wysiwyg [contenteditable="true"] {
+//   caret-color: transparent !important;
+// }
+
+.custom-cursor {
+  position: absolute;
+  width: 3px;
+  background: #5d8cd7;
+  pointer-events: none;
+  transition: 
+    opacity 0.3s ease,
+    transform 0.15s cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation: cursor-blink 1s infinite;
+  z-index: 9;
+
+  // 日间模式
+  [data-theme-mode="light"] & {
+    background: #5d8cd7;
+  }
+
+  // 夜间模式
+  [data-theme-mode="dark"] & {
+    background: #8ab4f8;
+  }
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
