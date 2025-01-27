@@ -103,11 +103,15 @@ $opacity-levels: (
 // ========================
 // 高亮条样式
 // ========================
+.p {
+  z-index: 3;
+}
+
 #highlight-line {
   position: fixed;
   pointer-events: none;
   transition: all 0.2s ease;
-  z-index: 1;
+  z-index: 0;
   transform: translateY(-0.1em);
   
   // 日间模式
@@ -120,19 +124,19 @@ $opacity-levels: (
 }
 
 // 隐藏所有可编辑区域的默认光标
-// .protyle-wysiwyg [contenteditable="true"] {
-//   caret-color: transparent !important;
-// }
+.protyle-wysiwyg [contenteditable="true"] {
+  caret-color: transparent !important;
+}
 
-.custom-cursor {
+#custom-cursor {
   position: absolute;
   width: 3px;
   background: #5d8cd7;
   pointer-events: none;
   transition: 
-    opacity 0.3s ease,
+    opacity 0.7s ease,
     transform 0.15s cubic-bezier(0.22, 0.61, 0.36, 1);
-  animation: cursor-blink 1s infinite;
+  animation: cursor-blink 1.7s infinite;
   z-index: 9;
 
   // 日间模式

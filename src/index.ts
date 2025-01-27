@@ -3,223 +3,247 @@ import { Plugin } from "siyuan";
 import "@/index.scss";
 
 export default class ZenType extends Plugin {
-  // 类名常量
-  private readonly FOCUS = "focus-block";
-  private readonly BLUR = "blur-block";
+  // 样式类常量
+  private readonly FOCUS_CLASS = "focus-block";  // 焦点块样式
+  private readonly BLUR_CLASS = "blur-block";    // 模糊块样式
 
-  // 创建元素
-  private highlightLine: HTMLElement;
-  private customCursor: HTMLElement;
+  // DOM 元素
+  private highlightLine: HTMLElement;  // 高亮指示条
+  private customCursor: HTMLElement;   // 自定义光标
 
+  //====================
+  // 生命周期方法
+  //====================
   onload() {
     console.log("ZenType loaded");
-    // 初始化事件监听
     this.initEventListeners();
-
-    // 创建编辑区元素
-    const editorContainer = document.querySelector(".protyle") || document.body;
-    // 创建高亮条元素
-    this.highlightLine = document.createElement("div");
-    this.highlightLine.id = "highlight-line";
-    editorContainer.appendChild(this.highlightLine);
-    this.highlightLine.style.display = "none";
-    // 创建自定义光标
-    this.customCursor = document.createElement("div");
-    this.customCursor.className = "custom-cursor";
-    editorContainer.appendChild(this.customCursor);
-    this.customCursor.style.display = "block";
+    setTimeout(() => {
+          this.initDOMElements();
+    }, 1500); // 延迟 1500ms 确保 DOM 加载
   }
 
-  // 事件处理器类型定义
+  onunload() {
+    console.log("ZenType unloaded");
+    this.cleanupResources();
+  }
+
+  //====================
+  // 初始化方法
+  //====================
+  /**
+   * 初始化事件监听器
+   */
   private initEventListeners() {
+    // 输入相关事件
     document.addEventListener("input", this.handleInput.bind(this));
     document.addEventListener("keyup", this.handleKeyUp.bind(this));
     document.addEventListener("keydown", this.handleKeyDown.bind(this));
+    
+    // 光标/选区相关事件
     document.addEventListener("click", this.handleClick.bind(this));
-    document.addEventListener("wheel", this.handleWheel.bind(this));
     document.addEventListener("selectionchange", this.handleSelectionChange.bind(this));
+    
+    // 滚动事件
+    document.addEventListener("wheel", this.handleWheel.bind(this));
   }
 
-  // 获取坐标
+  /**
+   * 初始化动态 DOM 元素
+   */
+  private initDOMElements() {
+    // 创建高亮指示条
+    this.highlightLine = document.createElement("div");
+    this.highlightLine.id = "highlight-line";
+    document.querySelector(".protyle").appendChild(this.highlightLine)
+    // editorContainer.appendChild(this.highlightLine);
+    this.highlightLine.style.display = "none";
+    
+    // 创建自定义光标
+    this.customCursor = document.createElement("div");
+    this.customCursor.id = "custom-cursor";
+    // editorContainer.appendChild(this.customCursor);
+    document.body.appendChild(this.customCursor);
+    this.customCursor.style.display = "block";
+  }
+
+  //====================
+  // 核心功能方法
+  //====================
+  /**
+   * 获取当前光标位置
+   * @returns {DOMRect | null} 光标位置的矩形信息
+   */
   private getCursorRect(): DOMRect | null {
     const selection = window.getSelection();
-
-    // 安全校验：选区是否存在
-    if (!selection || selection.rangeCount === 0) return null;
-
+    if (!selection?.rangeCount) return null;
+  
     try {
       const range = selection.getRangeAt(0);
-      return range.getBoundingClientRect();
+      return (
+        range.startContainer.nodeType === Node.TEXT_NODE
+          ? range  // 如果是文本节点，直接使用 range
+          : range.startContainer as Element  // 否则使用容器元素
+      ).getBoundingClientRect();
     } catch (error) {
       console.debug("获取光标位置失败", error);
       return null;
     }
   }
 
-  // 清理聚焦样式
-  private clearFocusBlocks() {
-    document.querySelectorAll(`.${this.FOCUS}, .${this.BLUR}`)
-      .forEach(el => el.classList.remove(this.FOCUS, this.BLUR));
+  /**
+   * 清理所有焦点/模糊样式
+   */
+  private clearFocusStyles() {
+    document.querySelectorAll(`.${this.FOCUS_CLASS}, .${this.BLUR_CLASS}`)
+      .forEach(el => el.classList.remove(this.FOCUS_CLASS, this.BLUR_CLASS));
   }
 
-  // 启用聚焦块
-  private focusBlockOn() {
-    // 步骤1: 获取当前选区并校验
+  /**
+   * 聚焦当前文本块
+   */
+  private focusCurrentBlock() {
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-    
-    // 步骤2: 查找当前焦点块
+    if (!selection?.rangeCount) return;
+
+    // 向上查找最近的块级元素
     const range = selection.getRangeAt(0);
-    const startNode = range.startContainer;
+    let element: HTMLElement = range.startContainer as HTMLElement;
+    if (element.nodeType === Node.TEXT_NODE) {
+      element = element.parentElement!;
+    }
+
+    // 遍历查找符合条件的块元素
     let currentBlock: HTMLElement | null = null;
-    
-    let element = startNode.nodeType === Node.TEXT_NODE ? 
-        startNode.parentElement : startNode as HTMLElement;
     while (element && !element.classList?.contains('protyle-wysiwyg')) {
-        if (element.dataset?.nodeId && (
-            element.classList?.contains('p') || 
-            element.dataset.type === 'NodeHeading' || 
-            element.dataset.type === 'NodeList'
-        )) {
-            currentBlock = element;
-            break;
-        }
-        element = element.parentElement;
+      const isValidBlock = element.dataset?.nodeId && (
+        element.classList?.contains('p') || 
+        element.dataset.type === 'NodeHeading' || 
+        element.dataset.type === 'NodeList'
+      );
+      
+      if (isValidBlock) {
+        currentBlock = element;
+        break;
+      }
+      element = element.parentElement!;
     }
     if (!currentBlock) return;
 
-    // 步骤3: 清除旧元素
-    this.clearFocusBlocks()
-
-    // 步骤4: 标记当前焦点块
-    currentBlock.classList.add(this.FOCUS);
-
-    // 步骤5: 模糊兄弟块
-    const editorRoot = document.querySelector('.protyle-wysiwyg');
-    if (!editorRoot) return;
+    // 更新块样式
+    this.clearFocusStyles();
+    currentBlock.classList.add(this.FOCUS_CLASS);
     
-    Array.from(editorRoot.children).forEach(child => {
-        if (!child.contains(currentBlock) && child !== currentBlock) {
-            child.classList.add(this.BLUR);
-        }
+    // 模糊其他块
+    const editorRoot = document.querySelector('.protyle-wysiwyg');
+    Array.from(editorRoot?.children || []).forEach(child => {
+      if (!child.contains(currentBlock)) {
+        child.classList.add(this.BLUR_CLASS);
+      }
     });
 
-    // 可选：平滑滚动到视图中心
+    // 平滑滚动到视图中心
     currentBlock.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-  
-  // 退出聚焦块
-  private focusBlockOff() {
-    this.clearFocusBlocks();
+    this.updateCustomCursor();
   }
 
-  // 启用高亮条
-  private highlightLineOn() {
+  /**
+   * 更新高亮指示线位置
+   */
+  private updateHighlightLine() {
     const rect = this.getCursorRect();
     if (!rect) return;
-    this.highlightLine.style.display = "block";
-    // 计算编辑器相关尺寸
+
     const editor = document.querySelector('.protyle-wysiwyg');
     const editorWidth = editor?.clientWidth || 800;
-    const editorLeft = editor?.getBoundingClientRect().left || 0;
+    const editorRect = editor?.getBoundingClientRect() || { left: 0 };
 
-    // 设置高亮条样式
+    // 动态调整指示线样式
+    this.highlightLine.style.display = "block";
     this.highlightLine.style.width = `${editorWidth + 40}px`;
-    this.highlightLine.style.left = `${editorLeft - 15}px`;
+    this.highlightLine.style.left = `${editorRect.left - 15}px`;
     this.highlightLine.style.height = `${rect.height + 7}px`;
     this.highlightLine.style.top = `${rect.top + window.scrollY - 3}px`;
   }
 
-  // 退出高亮条
-  private highlightLineOff() {
-    this.highlightLine.style.display = "none";
-  }
+  /**
+   * 更新自定义光标样式
+   */
+  private updateCustomCursor() {
+    const rect = this.getCursorRect();
+    if (!rect) {
+      this.customCursor.style.display = "none";
+      return;
+    }
 
-  // 自定义光标
-  private betterCursor() {
-    let rect = this.getCursorRect();
-    if (!rect) return;
-
+    // 计算动态尺寸和位置
     this.customCursor.style.display = "block";
-    this.customCursor.style.height = `${rect.height + 0.4*rect.height }px`;
+    this.customCursor.style.height = `${rect.height * 1.4}px`;
     this.customCursor.style.transform = `translate(
-        ${rect.left + window.scrollX - 1}px, 
-        ${rect.top + window.scrollY - 0.2*rect.height}px
+      ${rect.left + window.scrollX - 1}px, 
+      ${rect.top + window.scrollY - rect.height * 0.3}px
     )`;
 
-    // 保持光标可见
+    // 重置动画以保持可见
     this.customCursor.style.animation = "none";
-    void this.customCursor.offsetWidth;
-    this.customCursor.style.animation = null;
+    void this.customCursor.offsetWidth; // 触发重绘
+    this.customCursor.style.animation = "";
+
+    this.updateHighlightLine();
   }
 
-  // ===============
-  // 事件监听 方法
-  // ===============
+  //====================
+  // 事件处理器
+  //====================
   private handleInput() {
-    // 启用聚焦块
-    this.focusBlockOn();
-    // 启用高亮条
-    this.highlightLineOn();
-    this.betterCursor();
+    this.focusCurrentBlock();
+    this.updateHighlightLine();
+    this.updateCustomCursor();
   }
 
   private handleClick() {
-    this.betterCursor();
+    this.updateCustomCursor();
   }
 
   private handleWheel() {
-    this.focusBlockOff();
-    this.highlightLineOff();
-    this.betterCursor();
+    this.clearFocusStyles();
+    this.highlightLine.style.display = "none";
+    this.updateCustomCursor();
   }
 
   private handleKeyDown(event: KeyboardEvent) {
     if (["ArrowUp", "ArrowDown"].includes(event.key)) {
-        this.focusBlockOff();
-        this.highlightLineOff();
+      this.clearFocusStyles();
+      this.highlightLine.style.display = "none";
     }
-    this.betterCursor();
+    this.updateCustomCursor();
   }
 
   private handleKeyUp() {
-    this.betterCursor();
+    this.updateCustomCursor();
   }
 
   private handleSelectionChange() {
-    this.betterCursor();
+    this.updateCustomCursor();
   }
 
-  onunload() {
-    console.log("ZenType unloaded");
-  
-    // ========================
-    // 1. 移除所有事件监听器
-    // ========================
+  //====================
+  // 资源清理
+  //====================
+  private cleanupResources() {
+    // 移除事件监听器
     document.removeEventListener("input", this.handleInput);
     document.removeEventListener("keyup", this.handleKeyUp);
     document.removeEventListener("keydown", this.handleKeyDown);
     document.removeEventListener("click", this.handleClick);
     document.removeEventListener("wheel", this.handleWheel);
     document.removeEventListener("selectionchange", this.handleSelectionChange);
-  
-    // ========================
-    // 2. 清理动态创建的元素
-    // ========================
-    // 移除高亮条
-    if (this.highlightLine && this.highlightLine.parentNode) {
-      this.highlightLine.parentNode.removeChild(this.highlightLine);
-    }
-    
-    // 移除自定义光标
-    if (this.customCursor && this.customCursor.parentNode) {
-      this.customCursor.parentNode.removeChild(this.customCursor);
-    }
-  
-    // ========================
-    // 3. 恢复DOM修改
-    // ========================
-    // 移除所有焦点/模糊样式
-    this.clearFocusBlocks();
+
+    // 移除动态元素
+    [this.highlightLine, this.customCursor].forEach(el => {
+      el?.parentNode?.removeChild(el);
+    });
+
+    // 恢复样式
+    this.clearFocusStyles();
   }
 }
