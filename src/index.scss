@@ -135,8 +135,8 @@ $opacity-levels: (
   pointer-events: none;
   transition: 
     opacity 0.7s ease,
-    transform 0.15s cubic-bezier(0.22, 0.61, 0.36, 1);
-  animation: cursor-blink 1.7s infinite;
+    transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation: cursor-blink 1.7s 1s infinite;
   z-index: 9;
 
   // 日间模式
@@ -151,6 +151,22 @@ $opacity-levels: (
 }
 
 @keyframes cursor-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  55% {
+    opacity: 0.7;
+  }
+  60% {
+    opacity: 0.3;
+  }
+  95% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.3;
+  }
 }

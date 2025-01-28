@@ -73,17 +73,45 @@ export default class ZenType extends Plugin {
    * 获取当前光标位置
    * @returns {DOMRect | null} 光标位置的矩形信息
    */
+  // 这个因为直接获取元素矩形信息，会导致软换行时有问题
+  // private getCursorRect(): DOMRect | null {
+  //   const selection = window.getSelection();
+  //   if (!selection?.rangeCount) return null;
+  
+  //   try {
+  //     const range = selection.getRangeAt(0);
+  //     return (
+  //       range.startContainer.nodeType === Node.TEXT_NODE
+  //         ? range  // 如果是文本节点，直接使用 range
+  //         : range.startContainer as Element  // 否则使用容器元素
+  //     ).getBoundingClientRect();
+  //   } catch (error) {
+  //     console.debug("获取光标位置失败", error);
+  //     return null;
+  //   }
+  // }
   private getCursorRect(): DOMRect | null {
     const selection = window.getSelection();
     if (!selection?.rangeCount) return null;
   
     try {
-      const range = selection.getRangeAt(0);
-      return (
-        range.startContainer.nodeType === Node.TEXT_NODE
-          ? range  // 如果是文本节点，直接使用 range
-          : range.startContainer as Element  // 否则使用容器元素
-      ).getBoundingClientRect();
+      const range = selection.getRangeAt(0).cloneRange();
+      range.collapse(true); // 确保 range 是折叠状态
+  
+      // 优先获取光标实际渲染位置
+      const cursorRects = range.getClientRects();
+      if (cursorRects.length > 0) {
+        return cursorRects[0];
+      }
+  
+      // 回退方案：处理空行等特殊情况
+      const tempSpan = document.createElement("span");
+      tempSpan.textContent = "\u200b"; // 零宽空格
+      range.insertNode(tempSpan);
+      const rect = tempSpan.getBoundingClientRect();
+      tempSpan.remove();
+      
+      return rect;
     } catch (error) {
       console.debug("获取光标位置失败", error);
       return null;
@@ -101,46 +129,84 @@ export default class ZenType extends Plugin {
   /**
    * 聚焦当前文本块
    */
+  // private focusCurrentBlock() {
+  //   const selection = window.getSelection();
+  //   if (!selection?.rangeCount) return;
+
+  //   // 向上查找最近的块级元素
+  //   const range = selection.getRangeAt(0);
+  //   let element: HTMLElement = range.startContainer as HTMLElement;
+  //   if (element.nodeType === Node.TEXT_NODE) {
+  //     element = element.parentElement!;
+  //   }
+
+  //   // 遍历查找符合条件的块元素
+  //   let currentBlock: HTMLElement | null = null;
+  //   while (element && !element.classList?.contains('protyle-wysiwyg')) {
+  //     const isValidBlock = element.dataset?.nodeId && (
+  //       element.classList?.contains('p') || 
+  //       element.dataset.type === 'NodeHeading' || 
+  //       element.dataset.type === 'NodeList'
+  //     );
+      
+  //     if (isValidBlock) {
+  //       currentBlock = element;
+  //       break;
+  //     }
+  //     element = element.parentElement!;
+  //   }
+  //   if (!currentBlock) return;
+
+  //   // 更新块样式
+  //   this.clearFocusStyles();
+  //   currentBlock.classList.add(this.FOCUS_CLASS);
+    
+  //   // 模糊其他块
+  //   const editorRoot = document.querySelector('.protyle-wysiwyg');
+  //   Array.from(editorRoot?.children || []).forEach(child => {
+  //     if (!child.contains(currentBlock)) {
+  //       child.classList.add(this.BLUR_CLASS);
+  //     }
+  //   });
+
+  //   // 平滑滚动到视图中心
+  //   currentBlock.scrollIntoView({ behavior: "smooth", block: "center" });
+  //   this.updateCustomCursor();
+  // }
+  /**
+   * 聚焦当前文本块（优化版）
+   */
   private focusCurrentBlock() {
     const selection = window.getSelection();
     if (!selection?.rangeCount) return;
 
-    // 向上查找最近的块级元素
+    // 通过光标位置精准定位
     const range = selection.getRangeAt(0);
-    let element: HTMLElement = range.startContainer as HTMLElement;
+    let element: Node = range.startContainer;
+
+    // 处理文本节点的情况
     if (element.nodeType === Node.TEXT_NODE) {
       element = element.parentElement!;
     }
 
-    // 遍历查找符合条件的块元素
-    let currentBlock: HTMLElement | null = null;
-    while (element && !element.classList?.contains('protyle-wysiwyg')) {
-      const isValidBlock = element.dataset?.nodeId && (
-        element.classList?.contains('p') || 
-        element.dataset.type === 'NodeHeading' || 
-        element.dataset.type === 'NodeList'
-      );
-      
-      if (isValidBlock) {
-        currentBlock = element;
-        break;
-      }
-      element = element.parentElement!;
+    // 使用 closest 查找最近的块元素
+    const currentBlock = (element as HTMLElement).closest<HTMLElement>('[data-node-id]');
+    if (!currentBlock || !document.querySelector('.protyle-wysiwyg')?.contains(currentBlock)) {
+      return;
     }
-    if (!currentBlock) return;
 
     // 更新块样式
     this.clearFocusStyles();
     currentBlock.classList.add(this.FOCUS_CLASS);
-    
+
     // 模糊其他块
     const editorRoot = document.querySelector('.protyle-wysiwyg');
     Array.from(editorRoot?.children || []).forEach(child => {
-      if (!child.contains(currentBlock)) {
+      if (child !== currentBlock && !child.contains(currentBlock)) {
         child.classList.add(this.BLUR_CLASS);
       }
     });
-
+    
     // 平滑滚动到视图中心
     currentBlock.scrollIntoView({ behavior: "smooth", block: "center" });
     this.updateCustomCursor();
