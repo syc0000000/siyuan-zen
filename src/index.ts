@@ -270,7 +270,7 @@ export default class ZenType extends Plugin {
 
   private handleClick() {
     this.updateCustomCursor();
-    this.highlightLine.style.display = "block";
+    this.highlightLine.style.display = "none";
   }
 
   private handleWheel() {
@@ -280,7 +280,7 @@ export default class ZenType extends Plugin {
   }
 
   private handleKeyDown(event: KeyboardEvent) {
-    if (["ArrowUp", "ArrowDown"].includes(event.key)) {
+    if (["ArrowUp", "ArrowDown", "Esc"].includes(event.key)) {
       this.clearFocusStyles();
       this.highlightLine.style.display = "none";
     }

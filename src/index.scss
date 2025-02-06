@@ -30,7 +30,7 @@ $opacity-levels: (
   // ========================
   .focus-block {
     opacity: 1 !important;
-    z-index: 99 !important; // 确保焦点块在最上层
+    z-index: 9 !important; // 确保焦点块在最上层
   }
 
   // ========================
@@ -104,14 +104,14 @@ $opacity-levels: (
 // 高亮条样式
 // ========================
 .p {
-  z-index: 99;
+  z-index: 9;
 }
 
 #highlight-line {
   position: fixed;
   pointer-events: none;
   transition: all 0.2s ease;
-  z-index: 9;
+  z-index: 6;
   transform: translateY(-0.1em);
   
   // 日间模式
