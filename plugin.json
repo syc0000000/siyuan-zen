@@ -1,9 +1,9 @@
 {
   "name": "ZenType",
-  "author": "Han",
+  "author": "寒Orz",
   "url": "https://github.com/Han-Orz/siyuan-zen",
-  "version": "0.3.6",
-  "minAppVersion": "3.0.12",
+  "version": "1.0.4",
+  "minAppVersion": "3.0.0",
   "backends": [
     "windows",
     "linux",
@@ -29,8 +29,7 @@
     "zh_CN": "聚焦当前行，打字机模式与顺滑光标"
   },
   "readme": {
-    "en_US": "README.md",
-    "zh_CN": "README_zh_CN.md"
+    "zh_CN": "README.md"
   },
   "funding": {
     "custom": [
