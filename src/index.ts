@@ -54,8 +54,9 @@ export default class ZenType extends Plugin {
     // 创建高亮指示条
     this.highlightLine = document.createElement("div");
     this.highlightLine.id = "highlight-line";
-    document.querySelector(".protyle").appendChild(this.highlightLine)
-    // editorContainer.appendChild(this.highlightLine);
+    // document.querySelector(".protyle").appendChild(this.highlightLine);
+    document.body.appendChild(this.highlightLine);
+    // document.querySelector("#layouts").appendChild(this.highlightLine);
     this.highlightLine.style.display = "none";
     
     // 创建自定义光标
@@ -224,7 +225,7 @@ export default class ZenType extends Plugin {
     const editorRect = editor?.getBoundingClientRect() || { left: 0 };
 
     // 动态调整指示线样式
-    this.highlightLine.style.display = "block";
+    // this.highlightLine.style.display = "block";
     this.highlightLine.style.width = `${editorWidth + 40}px`;
     this.highlightLine.style.left = `${editorRect.left - 15}px`;
     this.highlightLine.style.height = `${rect.height + 7}px`;
@@ -254,7 +255,7 @@ export default class ZenType extends Plugin {
     void this.customCursor.offsetWidth; // 触发重绘
     this.customCursor.style.animation = "";
 
-    this.updateHighlightLine();
+    // this.updateHighlightLine();
   }
 
   //====================
@@ -264,22 +265,30 @@ export default class ZenType extends Plugin {
     this.focusCurrentBlock();
     this.updateHighlightLine();
     this.updateCustomCursor();
+    this.highlightLine.style.display = "block";
   }
 
   private handleClick() {
     this.updateCustomCursor();
+    this.highlightLine.style.display = "block";
   }
 
   private handleWheel() {
     this.clearFocusStyles();
-    this.highlightLine.style.display = "none";
     this.updateCustomCursor();
+    this.highlightLine.style.display = "none";
   }
 
   private handleKeyDown(event: KeyboardEvent) {
     if (["ArrowUp", "ArrowDown"].includes(event.key)) {
       this.clearFocusStyles();
       this.highlightLine.style.display = "none";
+    }
+    if (["Backspace", "Enter"].includes(event.key)) {
+      // 延迟确保DOM更新完成
+      setTimeout(() => {
+        this.focusCurrentBlock();
+      }, 200);
     }
     this.updateCustomCursor();
   }
