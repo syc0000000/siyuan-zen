@@ -1,34 +1,35 @@
-/* index.ts */
+/**
+ * ZenType - 思源笔记专注写作插件
+ * 提供专注模式、高亮当前编辑块和自定义光标效果
+ */
 import { Plugin } from "siyuan";
 import "@/index.scss";
 
-// ========================
 // 常量配置
-// ========================
-const INIT_DELAY = 1500;
+const INIT_DELAY = 1000;
 const CURSOR_UPDATE_DELAY = 200;
+const FOCUS_APPLY_DELAY = 50; // 应用焦点样式的延迟时间
 
 export default class ZenType extends Plugin {
-  // ========================
-  // 类常量
-  // ========================
+  // 选择器和类名常量
   private readonly SELECTORS = {
     FOCUS_CLASS: "focus-block",
     BLUR_CLASS: "blur-block",
     EDITOR_ROOT: ".protyle-wysiwyg",
-    HIGHLIGHT_LINE: "#highlight-line",
-    CUSTOM_CURSOR: "#custom-cursor"
+    HIGHLIGHT_LINE: "highlight-line",
+    CUSTOM_CURSOR: "custom-cursor"
   };
 
-  // ========================
   // DOM元素引用
-  // ========================
   private highlightLine: HTMLElement;
   private customCursor: HTMLElement;
+  private updateTimer: number;
+  private highlightLineTimer: number;
+  private focusApplyTimer: number; // 新增：焦点应用定时器
+  private isAnimating = false;
+  private lastFocusedBlock: HTMLElement | null = null; // 新增：记录上一个焦点块
 
-  // ========================
   // 生命周期方法
-  // ========================
   async onload() {
     console.log("ZenType loaded");
     this.initEventListeners();
@@ -40,9 +41,7 @@ export default class ZenType extends Plugin {
     this.cleanupResources();
   }
 
-  // ========================
   // 初始化方法
-  // ========================
   private initEventListeners() {
     const eventHandlers = {
       input: this.handleInput.bind(this),
@@ -59,22 +58,20 @@ export default class ZenType extends Plugin {
   }
 
   private initDOMElements() {
-    this.highlightLine = this.createDynamicElement(
-      "div",
-      this.SELECTORS.HIGHLIGHT_LINE
-    );
-    this.customCursor = this.createDynamicElement(
-      "div",
-      this.SELECTORS.CUSTOM_CURSOR
-    );
+    // 创建高亮行元素
+    this.highlightLine = document.createElement("div");
+    this.highlightLine.id = this.SELECTORS.HIGHLIGHT_LINE;
+    
+    // 创建自定义光标元素
+    this.customCursor = document.createElement("div");
+    this.customCursor.id = this.SELECTORS.CUSTOM_CURSOR;
 
+    // 添加到文档中
     document.body.append(this.highlightLine, this.customCursor);
     this.highlightLine.style.display = "none";
   }
 
-  // ========================
   // 核心功能方法
-  // ========================
   private getCursorRect(): DOMRect | null {
     const selection = window.getSelection();
     if (!selection?.rangeCount) return null;
@@ -82,22 +79,17 @@ export default class ZenType extends Plugin {
     try {
       const range = selection.getRangeAt(0).cloneRange();
       range.collapse(true);
-
-      // 尝试获取现有光标位置
       const cursorRects = range.getClientRects();
-      if (cursorRects.length > 0) return cursorRects[0];
-
-      // 处理空行情况
-      return this.getEmptyLineRect(range);
+      return cursorRects.length > 0 ? cursorRects[0] : this.getEmptyLineRect(range);
     } catch (error) {
-      console.debug("Cursor position error:", error);
+      console.debug("获取光标位置失败", error);
       return null;
     }
   }
 
   private getEmptyLineRect(range: Range): DOMRect {
     const tempSpan = document.createElement("span");
-    tempSpan.textContent = "\u200b";
+    tempSpan.textContent = "\u200b"; // 零宽空格
     range.insertNode(tempSpan);
     const rect = tempSpan.getBoundingClientRect();
     tempSpan.remove();
@@ -105,45 +97,75 @@ export default class ZenType extends Plugin {
   }
 
   private clearFocusStyles() {
+    // 保存当前焦点块的引用，以便在需要时恢复
+    const focusedBlock = document.querySelector(`.${this.SELECTORS.FOCUS_CLASS}`);
+    if (focusedBlock) {
+      this.lastFocusedBlock = focusedBlock as HTMLElement;
+    }
+
     document.querySelectorAll(
       `.${this.SELECTORS.FOCUS_CLASS}, .${this.SELECTORS.BLUR_CLASS}`
     ).forEach(el => {
       el.classList.remove(this.SELECTORS.FOCUS_CLASS, this.SELECTORS.BLUR_CLASS);
+      
+      // 确保透明度重置
+      (el as HTMLElement).style.opacity = "";
     });
   }
 
   private focusCurrentBlock() {
-    const selection = window.getSelection();
-    if (!selection?.rangeCount) return;
+    // 清除之前的定时器
+    if (this.focusApplyTimer) {
+      clearTimeout(this.focusApplyTimer);
+    }
+    
+    // 延迟应用焦点样式，避免在块切换时出现闪烁
+    this.focusApplyTimer = window.setTimeout(() => {
+      const selection = window.getSelection();
+      if (!selection?.rangeCount) return;
 
-    const range = selection.getRangeAt(0);
-    const currentBlock = this.findCurrentBlock(range.startContainer);
+      const range = selection.getRangeAt(0);
+      const currentBlock = this.findCurrentBlock(range.startContainer);
+      if (!currentBlock) return;
 
-    if (!currentBlock) return;
+      // 如果当前块与上一个焦点块相同，且已经有焦点类，则不重新应用
+      if (this.lastFocusedBlock === currentBlock && 
+          currentBlock.classList.contains(this.SELECTORS.FOCUS_CLASS)) {
+        return;
+      }
 
-    this.applyFocusStyles(currentBlock);
-    this.scrollToBlock(currentBlock);
-    this.updateCustomCursor();
+      this.applyFocusStyles(currentBlock);
+      this.scrollToBlock(currentBlock);
+      this.updateCustomCursor();
+      
+      // 更新最后焦点块引用
+      this.lastFocusedBlock = currentBlock;
+    }, FOCUS_APPLY_DELAY);
   }
 
   private findCurrentBlock(startNode: Node): HTMLElement | null {
     let element: Node = startNode;
     if (element.nodeType === Node.TEXT_NODE) {
-      element = element.parentElement!;
+      element = element.parentElement;
     }
-
-    return (element as HTMLElement).closest<HTMLElement>(
-      '[data-node-id]'
-    );
+    return (element as HTMLElement)?.closest('[data-node-id]');
   }
 
   private applyFocusStyles(currentBlock: HTMLElement) {
+    // 先清除所有样式
     this.clearFocusStyles();
+    
+    // 应用焦点样式
     currentBlock.classList.add(this.SELECTORS.FOCUS_CLASS);
 
+    // 获取编辑器根元素
     const editorRoot = document.querySelector(this.SELECTORS.EDITOR_ROOT);
-    Array.from(editorRoot?.children || []).forEach(child => {
-      if (child !== currentBlock && !child.contains(currentBlock)) {
+    if (!editorRoot) return;
+    
+    // 应用模糊样式到其他块
+    Array.from(editorRoot.children || []).forEach(child => {
+      if (child !== currentBlock && !child.contains(currentBlock) && 
+          !currentBlock.contains(child)) {
         child.classList.add(this.SELECTORS.BLUR_CLASS);
       }
     });
@@ -157,50 +179,23 @@ export default class ZenType extends Plugin {
     });
   }
 
-  // ========================
   // 视觉元素更新
-  // ========================
   private updateHighlightLine() {
     const rect = this.getCursorRect();
     if (!rect) return;
 
-    Object.assign(this.highlightLine.style, {
-      width: "100%",
-      height: `${rect.height + 7}px`,
-      top: `${rect.top + window.scrollY - 3}px`
-    });
+    if (this.highlightLineTimer) clearTimeout(this.highlightLineTimer);
+    
+    this.highlightLineTimer = window.setTimeout(() => {
+      Object.assign(this.highlightLine.style, {
+        display: "block",
+        width: "100%",
+        height: `${rect.height + 7}px`,
+        top: `${rect.top + window.scrollY - 3}px`
+      });
+    }, 200);
   }
 
-  // private updateCustomCursor() {
-  //   const rect = this.getCursorRect();
-  //   if (!rect) {
-  //     this.customCursor.style.display = "none";
-  //     return;
-  //   }
-
-  //   Object.assign(this.customCursor.style, {
-  //     display: "block",
-  //     height: `${rect.height * 1.4}px`,
-  //     transform: `translate(
-  //       ${rect.left + window.scrollX - 1}px, 
-  //       ${rect.top + window.scrollY - rect.height * 0.3}px
-  //     )`
-  //   });
-
-  //   this.resetCursorAnimation();
-  // }
-  // private resetCursorAnimation() {
-  //   this.customCursor.style.animation = "none";
-  //   void this.customCursor.offsetWidth; // 触发重绘
-  //   this.customCursor.style.animation = "";
-  // }
-  
-  // 光标追加自动更新
-  // 在类中添加这两个成员变量
-  private updateTimer: number;
-  private isAnimating = false;
-
-  // 修改后的 updateCustomCursor 方法
   private updateCustomCursor() {
     const update = () => {
       const rect = this.getCursorRect();
@@ -208,9 +203,6 @@ export default class ZenType extends Plugin {
         this.customCursor.style.display = "none";
         return;
       }
-
-      // 使用强制布局更新保证位置准确
-      this.customCursor.getBoundingClientRect();
       
       Object.assign(this.customCursor.style, {
         display: "block",
@@ -221,18 +213,17 @@ export default class ZenType extends Plugin {
         )`
       });
 
-      // 添加动画状态追踪
       this.isAnimating = true;
       setTimeout(() => {
         this.isAnimating = false;
-      }, 100); // 与CSS动画时间匹配
+      }, 100);
+
+      this.updateHighlightLine();
     };
 
-    // 方案1：每300ms强制更新一次
     if (this.updateTimer) clearTimeout(this.updateTimer);
     this.updateTimer = window.setTimeout(update, 300);
 
-    // 方案2：如果当前没有动画在进行，立即更新
     if (!this.isAnimating) {
       update();
     }
@@ -245,38 +236,36 @@ export default class ZenType extends Plugin {
     this.customCursor.style.animation = "";
   }
   
-  // ========================
   // 事件处理器
-  // ========================
   private handleInput() {
     this.focusCurrentBlock();
-    this.updateHighlightLine();
     this.updateCustomCursor();
-    this.highlightLine.style.display = "block";
   }
 
   private handleClick() {
+    this.focusCurrentBlock();
     this.updateCustomCursor();
-    this.highlightLine.style.display = "none";
   }
 
   private handleWheel() {
     this.clearFocusStyles();
     this.updateCustomCursor();
-    this.highlightLine.style.display = "none";
   }
 
   private handleKeyDown(event: KeyboardEvent) {
     if (["ArrowUp", "ArrowDown", "Esc"].includes(event.key)) {
       this.clearFocusStyles();
-      this.highlightLine.style.display = "none";
     }
 
     if (["Backspace", "Enter"].includes(event.key)) {
-      setTimeout(() => this.focusCurrentBlock(), CURSOR_UPDATE_DELAY);
+      // 对于可能导致块结构变化的键，使用延迟处理
+      setTimeout(() => {
+        this.focusCurrentBlock();
+        this.updateCustomCursor();
+      }, CURSOR_UPDATE_DELAY);
+    } else {
+      this.updateCustomCursor();
     }
-
-    this.updateCustomCursor();
   }
 
   private handleKeyUp() {
@@ -284,21 +273,11 @@ export default class ZenType extends Plugin {
   }
 
   private handleSelectionChange() {
+    this.focusCurrentBlock();
     this.updateCustomCursor();
   }
 
-  // ========================
-  // 工具方法
-  // ========================
-  private createDynamicElement(tag: string, id: string): HTMLElement {
-    const element = document.createElement(tag);
-    element.id = id.replace("#", "");
-    return element;
-  }
-
-  // ========================
   // 资源清理
-  // ========================
   private cleanupResources() {
     // 移除事件监听器
     const events = ["input", "keyup", "keydown", "click", "wheel", "selectionchange"];
@@ -307,13 +286,15 @@ export default class ZenType extends Plugin {
     });
 
     // 移除动态元素
-    [this.highlightLine, this.customCursor].forEach(el => el?.remove());
+    this.highlightLine?.remove();
+    this.customCursor?.remove();
 
-    // 清理样式标签
-    Array.from(document.head.querySelectorAll("style"))
-      .filter(style => /(#custom-cursor|\.focus-block)/.test(style.textContent || ""))
-      .forEach(style => style.remove());
-
+    // 清理样式
     this.clearFocusStyles();
+    
+    // 清理定时器
+    if (this.updateTimer) clearTimeout(this.updateTimer);
+    if (this.highlightLineTimer) clearTimeout(this.highlightLineTimer);
+    if (this.focusApplyTimer) clearTimeout(this.focusApplyTimer);
   }
 }
